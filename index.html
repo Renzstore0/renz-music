@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Renz Music — Player</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#0f1724; --bg2:#0b1320; --card:rgba(255,255,255,0.06);
+    --accent:#ff5a7c; --muted:#cbd5e1; --glass:rgba(255,255,255,0.06);
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg1:#f5f7fb; --bg2:#eef2ff; --card:rgba(0,0,0,0.04);
+      --accent:#ff3366; --muted:#334155; --glass:rgba(0,0,0,0.06);
+    }
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;color:var(--muted)}
+  body{
+    background: radial-gradient(1200px 600px at 15% 10%, rgba(255,90,120,0.06), transparent),
+                radial-gradient(900px 500px at 85% 90%, rgba(40,120,255,0.04), transparent),
+                linear-gradient(180deg,var(--bg1),var(--bg2));
+    display:flex;align-items:center;justify-content:center;padding:28px;
+  }
+
+  .app{
+    width:100%;
+    max-width:980px;
+    display:grid;
+    grid-template-columns: 380px 1fr;
+    gap:26px;
+    align-items:start;
+  }
+
+  /* left panel - player */
+  .player-card{
+    border-radius:20px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    padding:22px;
+    box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    backdrop-filter: blur(8px);
+    position:relative;
+  }
+  .cover-wrap{
+    width:100%;
+    display:flex;
+    justify-content:center;
+    margin-bottom:18px;
+  }
+  .cover{
+    width:220px;height:220px;border-radius:999px;object-fit:cover;
+    box-shadow: 0 12px 40px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.03);
+    transition: transform .45s cubic-bezier(.2,.9,.2,1);
+  }
+  .track-title{font-size:20px;font-weight:700;text-align:center;margin-top:12px;color:var(--muted)}
+  .track-artist{font-size:13px;text-align:center;margin-top:6px;color:rgba(153,153,153,0.9)}
+
+  .progress{
+    margin-top:18px;height:10px;border-radius:999px;background:linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+    position:relative;overflow:hidden;
+  }
+  .progress > .bar{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#ffd1e0);transition:width .12s linear}
+  .time-row{display:flex;justify-content:space-between;font-size:12px;color:rgba(200,200,200,0.7);margin-top:8px}
+
+  .controls{display:flex;justify-content:center;gap:18px;margin-top:18px;align-items:center}
+  .btn{
+    width:54px;height:54px;border-radius:999px;border:none;display:inline-flex;align-items:center;justify-content:center;
+    background:var(--card);cursor:pointer;box-shadow:0 6px 20px rgba(2,6,23,0.5);transition:transform .12s, background .12s;
+  }
+  .btn:active{transform:scale(.96)}
+  .btn-main{width:72px;height:72px;background:linear-gradient(180deg,var(--accent),#ff2a63);color:white;font-weight:700;box-shadow:0 10px 30px rgba(255,50,100,0.14)}
+  .icon{width:20px;height:20px;display:block}
+
+  .small-row{display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:13px}
+  .btn-ghost{padding:8px 12px;border-radius:999px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);cursor:pointer}
+
+  /* right panel - search + list */
+  .right{
+    display:flex;flex-direction:column;gap:18px;
+  }
+  .searchbar{
+    display:flex;gap:10px;align-items:center;background:var(--glass);padding:10px;border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.02);
+  }
+  .searchbar input{
+    flex:1;background:transparent;border:0;outline:0;color:var(--muted);font-size:15px;padding:8px;
+  }
+  .searchbar button{padding:10px 14px;border-radius:12px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+
+  .playlist{
+    overflow:auto;padding:12px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+    max-height:64vh;
+  }
+
+  .track{
+    display:flex;gap:12px;align-items:center;padding:10px;border-radius:12px;margin-bottom:8px;transition:background .12s, transform .08s;
+  }
+  .track:hover{background:rgba(255,255,255,0.02);transform:translateY(-4px)}
+  .t-cover{width:64px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0}
+  .t-meta{flex:1;min-width:0}
+  .t-title{font-weight:600;font-size:15px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t-sub{font-size:13px;color:rgba(200,200,200,0.7);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t-actions{display:flex;gap:8px}
+
+  .chip{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.03);font-size:13px;color:var(--muted)}
+
+  /* responsive */
+  @media (max-width:880px){
+    .app{grid-template-columns:1fr;max-width:760px}
+    .player-card{order:2}
+    .right{order:1}
+  }
+</style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="player-card">
+      <div class="cover-wrap">
+        <img id="cover" class="cover" src="https://i.scdn.co/image/ab67616d0000b2731f44db452a68e229650a302c" alt="cover">
+      </div>
+      <div class="track-title" id="title">—</div>
+      <div class="track-artist" id="artist">—</div>
+
+      <div class="progress" id="progress" title="klik untuk melompat">
+        <div class="bar" id="bar"></div>
+      </div>
+      <div class="time-row">
+        <div id="cur">0:00</div><div id="dur">0:00</div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="prev" title="Prev">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 19V5l10 7z"></path><path d="M18 19V5" stroke-width="1.5"></path></svg>
+        </button>
+
+        <button class="btn btn-main" id="play" title="Play / Pause">
+          <svg id="icon-play" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 3v18l15-9z"></path></svg>
+          <svg id="icon-pause" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="display:none"><path d="M6 19h4V5H6zM14 5v14h4V5z"></path></svg>
+        </button>
+
+        <button class="btn" id="next" title="Next">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 5v14L9 12z"></path><path d="M5 5v14" stroke-width="1.5"></path></svg>
+        </button>
+      </div>
+
+      <div class="small-row">
+        <div class="chip" id="status">idle</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-ghost" id="shuffle">Shuffle</button>
+          <button class="btn-ghost" id="downloadNow">Download</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="searchbar">
+        <input id="q" placeholder="Cari lagu atau artis (enter untuk cari)" />
+        <button id="btnSearch">Cari</button>
+      </div>
+
+      <div class="playlist" id="results">
+        <!-- tracks akan muncul di sini -->
+        <div style="color:rgba(255,255,255,0.5);padding:18px;text-align:center">Ketik lalu tekan Cari untuk mulai</div>
+      </div>
+    </div>
+  </div>
+
+  <audio id="audio" preload="metadata"></audio>
+
+<script>
+/* CONFIG */
+const APIKEY = 'RenzzXc'
+const SEARCH_URL = 'https://velyn.mom/api/search/spotify'
+const DOWN_URL   = 'https://velyn.mom/api/downloader/spotify'
+
+/* STATE */
+let queue = []   // array of track objects from search
+let idx = -1
+let isShuffle = false
+
+/* EL */
+const audio = document.getElementById('audio')
+const cover = document.getElementById('cover')
+const titleEl = document.getElementById('title')
+const artistEl = document.getElementById('artist')
+const bar = document.getElementById('bar')
+const progress = document.getElementById('progress')
+const cur = document.getElementById('cur')
+const dur = document.getElementById('dur')
+const results = document.getElementById('results')
+const status = document.getElementById('status')
+const btnPlay = document.getElementById('play')
+const iconPlay = document.getElementById('icon-play')
+const iconPause = document.getElementById('icon-pause')
+const btnPrev = document.getElementById('prev')
+const btnNext = document.getElementById('next')
+const btnSearch = document.getElementById('btnSearch')
+const q = document.getElementById('q')
+const btnDownloadNow = document.getElementById('downloadNow')
+const btnShuffle = document.getElementById('shuffle')
+
+/* HELPERS */
+const fmt = ms=>{
+  if(!ms || isNaN(ms)) return '0:00'
+  const s = Math.floor(ms/1000)
+  const m = Math.floor(s/60)
+  const sec = (s%60).toString().padStart(2,'0')
+  return `${m}:${sec}`
+}
+const setStatus = txt=> status.textContent = txt
+
+/* SEARCH */
+async function search(query){
+  if(!query) return
+  setStatus('Mencari...')
+  results.innerHTML = `<div style="padding:18px;color:rgba(255,255,255,0.6);text-align:center">Mencari "${query}" ...</div>`
+  try{
+    const url = `${SEARCH_URL}?apikey=${encodeURIComponent(APIKEY)}&query=${encodeURIComponent(query)}`
+    const res = await fetch(url)
+    if(!res.ok) throw new Error('HTTP '+res.status)
+    const data = await res.json()
+    if(!Array.isArray(data) || data.length===0){
+      results.innerHTML = `<div style="padding:18px;color:rgba(255,255,255,0.5);text-align:center">Tidak ada hasil.</div>`
+      setStatus('no results')
+      return
+    }
+    queue = data.map(t=>({
+      title:t.title||'unknown',
+      artists:t.artists||'-',
+      album:t.album||'-',
+      duration:t.duration||0,
+      link:t.link,
+      cover:t.cover_url||'',
+      raw:t
+    }))
+    idx = -1
+    renderQueue()
+    setStatus(`${queue.length} hasil`)
+  }catch(e){
+    results.innerHTML = `<div style="padding:18px;color:#ffb4c6;text-align:center">Error: ${e.message}</div>`
+    setStatus('error')
+    console.error(e)
+  }
+}
+
+/* RENDER LIST */
+function renderQueue(){
+  results.innerHTML = ''
+  for(let i=0;i<queue.length;i++){
+    const t = queue[i]
+    const row = document.createElement('div')
+    row.className = 'track'
+    row.innerHTML = `
+      <img class="t-cover" src="${t.cover}" alt="">
+      <div class="t-meta">
+        <div class="t-title">${t.title}</div>
+        <div class="t-sub">${t.artists} • ${t.album} • ${fmt(t.duration)}</div>
+      </div>
+      <div class="t-actions">
+        <button class="btn" data-i="${i}" title="Play">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 3v18l15-9z"></path></svg>
+        </button>
+        <button class="btn" data-d="${i}" title="Download">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"></path></svg>
+        </button>
+      </div>
+    `
+    // play by clicking anywhere on row
+    row.querySelector('[data-i]')?.addEventListener('click',e=>{
+      const id = Number(e.currentTarget.getAttribute('data-i'))
+      playIndex(id)
+    })
+    row.querySelector('[data-d]')?.addEventListener('click',e=>{
+      const id = Number(e.currentTarget.getAttribute('data-d'))
+      downloadByIndex(id)
+    })
+    // clicking track area plays too
+    row.querySelector('.t-meta').addEventListener('click',()=>playIndex(i))
+    results.appendChild(row)
+  }
+}
+
+/* PLAY LOGIC */
+async function playIndex(i){
+  if(i<0 || i>=queue.length) return
+  idx = i
+  const track = queue[idx]
+  setStatus('loading track...')
+  titleEl.textContent = track.title
+  artistEl.textContent = track.artists
+  cover.src = track.cover || 'https://i.scdn.co/image/ab67616d0000b2731f44db452a68e229650a302c'
+  // fetch downloader to get mp3 url
+  try{
+    const info = await fetchDownloader(track.link)
+    if(!info || !info.url) throw new Error('Tidak dapat ambil url audio')
+    audio.src = info.url
+    await audio.play().catch(()=>{})
+    setPlayingUI(true)
+    setStatus(`playing • ${track.artists}`)
+  }catch(e){
+    setStatus('error load')
+    alert('Gagal play: '+e.message+'\nJika muncul CORS, jalankan proxy server atau gunakan server-side request.')
+    console.error(e)
+  }
+}
+
+function setPlayingUI(is){
+  iconPlay.style.display = is? 'none':'block'
+  iconPause.style.display = is? 'block':'none'
+  if(is) cover.style.transform = 'rotate(6deg) scale(1.02)'
+  else cover.style.transform = 'none'
+}
+
+/* NEXT / PREV */
+function playNext(){
+  if(queue.length===0) return
+  if(isShuffle){
+    const r = Math.floor(Math.random()*queue.length)
+    playIndex(r)
+  }else{
+    let n = idx+1
+    if(n>=queue.length) n = 0
+    playIndex(n)
+  }
+}
+function playPrev(){
+  if(queue.length===0) return
+  let n = idx-1
+  if(n<0) n = queue.length-1
+  playIndex(n)
+}
+
+/* DOWNLOAD */
+async function fetchDownloader(spotifyUrl){
+  const url = `${DOWN_URL}?apikey=${encodeURIComponent(APIKEY)}&url=${encodeURIComponent(spotifyUrl)}`
+  const res = await fetch(url)
+  if(!res.ok){
+    let txt = await res.text().catch(()=>null)
+    try{ const j = JSON.parse(txt); throw new Error(j.message||txt||('HTTP '+res.status)) }catch(e){
+      throw new Error('HTTP '+res.status)
+    }
+  }
+  const data = await res.json()
+  return data
+}
+async function downloadByIndex(i){
+  const t = queue[i]
+  if(!t) return
+  setStatus('menyiapkan download...')
+  try{
+    const info = await fetchDownloader(t.link)
+    if(!info || !info.url) throw new Error('Tidak dapat ambil link download')
+    window.open(info.url, '_blank')
+    setStatus('download ready')
+  }catch(e){
+    setStatus('download error')
+    alert('Gagal download: '+e.message)
+  }
+}
+async function downloadCurrent(){
+  if(idx<0) return alert('Tidak ada lagu diputar')
+  return downloadByIndex(idx)
+}
+
+/* EVENTS */
+btnSearch.addEventListener('click', ()=> search(q.value.trim()))
+q.addEventListener('keydown', e=>{ if(e.key==='Enter') search(q.value.trim()) })
+btnPlay.addEventListener('click', async ()=>{
+  if(audio.paused && (audio.src || idx>-1)){
+    if(!audio.src && idx>-1) await playIndex(idx)
+    else{ audio.play().catch(()=>{}); setPlayingUI(true) }
+  } else { audio.pause(); setPlayingUI(false) }
+})
+btnNext.addEventListener('click', playNext)
+btnPrev.addEventListener('click', playPrev)
+btnDownloadNow.addEventListener('click', downloadCurrent)
+btnShuffle.addEventListener('click', ()=>{ isShuffle = !isShuffle; btnShuffle.style.opacity = isShuffle? '1':'0.65'; btnShuffle.style.background = isShuffle? 'linear-gradient(90deg,var(--accent),#ffc6dd)':'transparent' })
+
+audio.addEventListener('loadedmetadata', ()=>{
+  dur.textContent = fmt(audio.duration*1000)
+  setStatus('ready')
+})
+audio.addEventListener('timeupdate', ()=>{
+  cur.textContent = fmt(audio.currentTime*1000)
+  const p = (audio.currentTime / (audio.duration||1))*100
+  bar.style.width = p+'%'
+})
+audio.addEventListener('ended', ()=>{ setPlayingUI(false); playNext() })
+audio.addEventListener('play', ()=> setPlayingUI(true))
+audio.addEventListener('pause', ()=> setPlayingUI(false))
+
+/* progress seek */
+progress.addEventListener('click', e=>{
+  const rect = progress.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const pct = x / rect.width
+  audio.currentTime = (audio.duration||0) * pct
+})
+
+/* keyboard */
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); btnPlay.click() }
+  if(e.code==='ArrowRight'){ playNext() }
+  if(e.code==='ArrowLeft'){ playPrev() }
+})
+
+/* initial small demo (optional) */
+// you can uncomment to auto-search a sample
+// search('penjaga hati')
+
+/* CORS note (visible to user only in console) */
+console.info('Jika fetch ke API gagal karena CORS, jalankan proxy server. Contoh: server-side fetch lalu kembalikan ke frontend.')
+
+</script>
+</body>
+</html>
