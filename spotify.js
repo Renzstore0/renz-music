@@ -1,19 +1,24 @@
 export async function handler(event, context) {
-  const query = event.queryStringParameters.query
-  if (!query) {
-    return { statusCode: 400, body: "Missing query" }
-  }
-
-  const url = `https://velyn.mom/api/spotify?apikey=RenzzXc&query=${encodeURIComponent(query)}`
   try {
-    const res = await fetch(url)
-    const data = await res.text()
+    // Cek query param, misal ?track=hello
+    const params = new URLSearchParams(event.queryStringParameters)
+    const track = params.get("track") || "No track provided"
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: data
+      body: JSON.stringify({
+        success: true,
+        message: "Spotify API simulasi jalan",
+        requested: track,
+        timestamp: new Date().toISOString()
+      })
     }
-  } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) }
+  } catch (err) {
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ success: false, error: err.message })
+    }
   }
 }
